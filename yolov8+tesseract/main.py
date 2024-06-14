@@ -5,7 +5,6 @@ import pytesseract
 import pandas as pd
 import Levenshtein
 
-
 # AI PART
 
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
@@ -40,6 +39,7 @@ def tesseract(image):
 def normalize_text(text):
     text = text.replace("\n", "")
     text = text.replace(" ", "")
+    text = text.lower()
     return text
 
 def check_similarity(word1, word2):
@@ -66,7 +66,7 @@ def check_excel_from_list(column_list, shoes_code):
             if (ord(char) > 0x0E00 and ord(char) < 0x0E7F):
                 break
             transformed_code += char
-        if (transformed_code == shoes_code):
+        if (normalize_text(transformed_code) == shoes_code):
             color = ""
             for char_shoes in code:
                 if (ord(char_shoes) > 0x0E00 and ord(char_shoes) < 0x0E7F):
@@ -83,9 +83,9 @@ def main():
     input_dir_path = "datasets/SH"
     screenshot_path = "screenshot"
     # open excel file
-    excel_path = "datasets/shoes-detection-excel.xlsx"
+    excel_path = "datasets/shoes-detection-excel-2.xlsx"
     column_a_list = read_column_a_excel(excel_path)
-    print(column_a_list)   
+    print(column_a_list)  
 
 
     # list all the image in the input directory
@@ -115,25 +115,31 @@ def main():
         shoes_list.append(shoes_dict)
 
         # list all the color that the shoe have in the excel file
-        color_list = check_excel_from_list(column_a_list, os.path.basename(image_path).split(".")[0])
-        print(color_list)
+        color_list = check_excel_from_list(column_a_list, normalize_text(os.path.basename(image_path).split(".")[0]))
+
+        # no color 
+        if (len(color_list) == 0):
+            print("No color list found in the excel file")
+            continue
         # use nlp to normalize the shoes list
+        remove_list = []
         for detail in shoes_dict["detail"]:
             text = normalize_text(detail["text"])
-            min = 0
+            max = 0
             with open("datasets/color_list.txt", "r") as reader:
                 lines = reader.readlines()
                 for line in lines:
                     line = line.replace("\n", "")
                     similarity = check_similarity(text, line)
-                    if (similarity > min):
-                        min = similarity
+                    if (similarity > max):
+                        max = similarity
                         detail["text"] = normalize_text(line)
+            if (max < 0.2):
+                remove_list.append(detail["text"])
         # delete those color from the image detail list
         # results
         print("results: ")
         print(shoes_dict["detail"])
-        remove_list = []
         for detail in shoes_dict["detail"]:
             if (detail["text"] in color_list):
                 remove_list.append(detail["text"])
