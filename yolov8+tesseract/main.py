@@ -3,8 +3,12 @@ from PIL import Image, ImageDraw
 import os
 import pytesseract
 import pandas as pd
+import Levenshtein
+
 
 # AI PART
+
+pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
 
 def trian_yolov8(model_path, image_path):
     model = YOLO(model_path)
@@ -35,7 +39,16 @@ def tesseract(image):
 
 def normalize_text(text):
     text = text.replace("\n", "")
+    text = text.replace(" ", "")
     return text
+
+def check_similarity(word1, word2):
+    distance = Levenshtein.distance(word1, word2)
+    max_len = max(len(word1), len(word2))
+    similarity = 1 - (distance / max_len)
+    return similarity
+
+
 
 # EXCEL PART
 
@@ -60,18 +73,21 @@ def check_excel_from_list(column_list, shoes_code):
                     color += char_shoes
             excel_color_list.append(color)
     return excel_color_list
-            
+
+
 
 # IMAGE PATH PART
 
 def main():
     text_model_path = "yolo-model/text-yolov8-350img.pt"
-    input_dir_path = "datasets/KLM"
+    input_dir_path = "datasets/SH"
     screenshot_path = "screenshot"
     # open excel file
     excel_path = "datasets/shoes-detection-excel.xlsx"
     column_a_list = read_column_a_excel(excel_path)
-    print(column_a_list)    
+    print(column_a_list)   
+
+
     # list all the image in the input directory
     input_list = os.listdir(input_dir_path)
     shoes_list = []
@@ -94,16 +110,39 @@ def main():
                     check = False
                     break
             if (check):
+                print(text)
                 shoes_dict["detail"].append({"coor": (coor[0] + (coor[2] - coor[0])/2, coor[1] + (coor[3] - coor[1])/2), "text": text})
         shoes_list.append(shoes_dict)
 
         # list all the color that the shoe have in the excel file
         color_list = check_excel_from_list(column_a_list, os.path.basename(image_path).split(".")[0])
         print(color_list)
-        # delete those color from the image detail list
+        # use nlp to normalize the shoes list
         for detail in shoes_dict["detail"]:
-            if detail["text"] in color_list:
-                shoes_dict["detail"].remove(detail)
+            text = normalize_text(detail["text"])
+            min = 0
+            with open("datasets/color_list.txt", "r") as reader:
+                lines = reader.readlines()
+                for line in lines:
+                    line = line.replace("\n", "")
+                    similarity = check_similarity(text, line)
+                    if (similarity > min):
+                        min = similarity
+                        detail["text"] = normalize_text(line)
+        # delete those color from the image detail list
+        # results
+        print("results: ")
+        print(shoes_dict["detail"])
+        remove_list = []
+        for detail in shoes_dict["detail"]:
+            if (detail["text"] in color_list):
+                remove_list.append(detail["text"])
+        print("remove list:")
+        print(remove_list)
+        for remove in remove_list:
+            for detail in shoes_dict["detail"]:
+                if (detail["text"] == remove):
+                    shoes_dict["detail"].remove(detail)
 
         # get the coordinate of every shoes
         coor_shoes_list = trian_yolov8("yolo-model/image-yolov8-500img.pt", image_path)
