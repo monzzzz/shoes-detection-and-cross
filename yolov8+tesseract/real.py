@@ -52,7 +52,7 @@ def check_similarity(word1, word2):
 
 # EXCEL PART
 
-def read_column_a_excel(file_path):
+def read_column_an_excel(file_path):
     df = pd.read_excel(file_path, sheet_name="Sheet1")
     column_a = df['shoes-code']
     column_a_list = column_a.to_list()
@@ -80,20 +80,32 @@ def check_excel_from_list(column_list, shoes_code):
 
 def main():
     text_model_path = "yolo-model/text-yolov8-350img.pt"
-    input_dir_path = "datasets/SH"
+    input_dir_path = ""
     screenshot_path = "screenshot"
     # open excel file
     excel_path = "datasets/shoes-detection-excel-2.xlsx"
-    column_a_list = read_column_a_excel(excel_path)
-    print(column_a_list)  
-
-    #list all the file and color in the list dict
+    excel_shoes_list = []
+    excel_shoes_set = []
+    column_a_list = read_column_an_excel(excel_path)
+    for code in column_a_list:
+        if (code.split(" ")[0] in excel_shoes_set):
+            excel_shoes_list["color"].append(code.split(" ")[1])
+        else:
+            excel_shoes_list.append({"code": code.split(" ")[0], "color": [code.split(" ")[1]]})
+            excel_shoes_set.append(code.split(" ")[0])
+    # read entire excel file first and then put it in the list dict
     # list all the image in the input directory
     input_list = os.listdir(input_dir_path)
     shoes_list = []
-    for input_file in input_list:
-        image_path = os.path.join(input_dir_path, input_file)
-        shoes_dict = {"name": input_file, "detail": []}
+    for excel_shoes in excel_shoes_list:
+        image_path = ""
+        # name in excel has to be the same as the name of the file
+        if os.path.exist(os.path.join(input_dir_path, excel_shoes["code"] + ".jpg")):
+            image_path = os.path.join(input_dir_path, excel_shoes["code"] + ".jpg")
+        else:
+            print("image doesn't exist")
+            continue
+        shoes_dict = {"name": excel_shoes["code"], "detail": []}
         coor_list = trian_yolov8(text_model_path, image_path)
         image = Image.open(image_path)
         # get coordinate for each shoes color in the image
@@ -113,14 +125,7 @@ def main():
                 print(text)
                 shoes_dict["detail"].append({"coor": (coor[0] + (coor[2] - coor[0])/2, coor[1] + (coor[3] - coor[1])/2), "text": text})
         shoes_list.append(shoes_dict)
-
-        # list all the color that the shoe have in the excel file
-        color_list = check_excel_from_list(column_a_list, normalize_text(os.path.basename(image_path).split(".")[0]))
-
-        # no color 
-        if (len(color_list) == 0):
-            print("No color list found in the excel file")
-            continue
+    
         # use nlp to normalize the shoes list
         remove_list = []
         for detail in shoes_dict["detail"]:
@@ -141,7 +146,7 @@ def main():
         print("results: ")
         print(shoes_dict["detail"])
         for detail in shoes_dict["detail"]:
-            if (detail["text"] in color_list):
+            if (detail["text"] in excel_shoes_list["color"]):
                 remove_list.append(detail["text"])
         print("remove list:")
         print(remove_list)
