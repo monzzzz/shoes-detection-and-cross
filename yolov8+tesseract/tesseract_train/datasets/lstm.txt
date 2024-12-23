@@ -1,0 +1,12 @@
+datasets/lstm/ขาว.lstmf
+datasets/lstm/ดำ.lstmf
+datasets/lstm/ชมพู.lstmf
+datasets/lstm/นู๊ด.lstmf
+datasets/lstm/แทน.lstmf
+datasets/lstm/ส้ม.lstmf
+datasets/lstm/ครีม.lstmf
+datasets/lstm/แดง.lstmf
+datasets/lstm/เหลือง.lstmf
+datasets/lstm/กะปิ.lstmf
+datasets/lstm/เขียว.lstmf
+datasets/lstm/ม่วง.lstmf
