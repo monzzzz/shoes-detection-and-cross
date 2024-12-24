@@ -5,10 +5,11 @@ import pytesseract
 import pandas as pd
 import Levenshtein
 import argparse
+import re
 
 # AI PART
 
-pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
 
 def trian_yolov8(model_path, image_path):
     model = YOLO(model_path)
@@ -88,6 +89,10 @@ def main():
     args = parser.parse_args()
     # open excel file
     excel_path = f"/mnt/networkshare/2024/checkstock/{args.excel}.xlsx"
+    if args.excel.endswith("ex"):
+        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo/Stock_Photo
+    else:
+        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo_EX/Stock_Photo_Ex"
     excel_shoes_list = []
     excel_shoes_set = []
     column_a_list = read_column_an_excel(excel_path)
@@ -106,10 +111,15 @@ def main():
     for excel_shoes in excel_shoes_list:
         image_path = ""
         # name in excel has to be the same as the name of the file
-        if os.path.exists(os.path.join(input_dir_path, excel_shoes["code"] + ".jpg")):
-            image_path = os.path.join(input_dir_path, excel_shoes["code"] + ".jpg")
+        base_name = excel_shoes["code"]
+        match = re.match(r"([A-Za-z]+)", base_name)
+        if match:
+            Letter = match.group(1)
+        input_dir_path_main = os.path.join(input_dir_path, Letter)
+        if os.path.exists(os.path.join(input_dir_path_main, excel_shoes["code"] + ".jpg")):
+            image_path = os.path.join(input_dir_path_main, excel_shoes["code"] + ".jpg")
         else:
-            print("image doesn't exist")
+            print(f"image doesn't exist: {os.path.join(input_dir_path, excel_shoes["code"] + ".jpg")}")
             continue
         shoes_dict = {"name": excel_shoes["code"], "detail": []}
         coor_list = trian_yolov8(text_model_path, image_path)
@@ -152,7 +162,7 @@ def main():
         print("results: ")
         print(shoes_dict["detail"])
         for detail in shoes_dict["detail"]:
-            if (detail["text"] in excel_shoes_list["color"]):
+            if (detail["text"] in excel_shoes["color"]):
                 remove_list.append(detail["text"])
         print("remove list:")
         print(remove_list)
@@ -185,7 +195,7 @@ def main():
             draw.line((x_center - 100, y_center - 100, x_center + 100, y_center + 100), fill="red", width=25)
             draw.line((x_center - 100, y_center + 100, x_center + 100, y_center - 100), fill="red", width=25)
             
-        image.save(os.path.join("results", os.path.basename(image_path)))
+        image.save(os.path.join(output_path, os.path.basename(image_path)))
 
     # print(shoes_list)
     # for shoe in shoes_list:
