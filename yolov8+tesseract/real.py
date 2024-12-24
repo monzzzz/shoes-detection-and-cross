@@ -6,6 +6,7 @@ import pandas as pd
 import Levenshtein
 import argparse
 import re
+import subprocess
 
 # AI PART
 
@@ -84,15 +85,20 @@ def main():
     parser = argparse.ArgumentParser(description="A program that takes arguments.")
     parser.add_argument('excel', type=str, help='Enter your excel file name')
     text_model_path = "yolo-model/text-yolov8-350img.pt"
-    input_dir_path = f"/mnt/networkshare/ORDER-2020/AIR/Photo"
     screenshot_path = "screenshot"
     args = parser.parse_args()
     # open excel file
     excel_path = f"/mnt/networkshare/2024/checkstock/{args.excel}.xlsx"
     if args.excel.endswith("ex"):
-        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo/Stock_Photo
+        subprocess.run(['sudo', 'rm', '-rf', '/mnt/networkshare/ORDER-2020/AIR/Photo_EX/Stock_Photo_Ex/generated'])
+        subprocess.run(['sudo', 'mkdir', '/mnt/networkshare/ORDER-2020/AIR/Photo_EX/Stock_Photo_Ex/generated'])
+        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo_EX/Stock_Photo_Ex/generated"
+        input_dir_path = f"/mnt/networkshare/ORDER-2020/AIR/Photo_EX"
     else:
-        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo_EX/Stock_Photo_Ex"
+        subprocess.run(['sudo', 'rm', '-rf', '/mnt/networkshare/ORDER-2020/AIR/Photo/Stock_Photo/generated'])
+        subprocess.run(['sudo', 'mkdir', '/mnt/networkshare/ORDER-2020/AIR/Photo/Stock_Photo/generated'])
+        output_path = "/mnt/networkshare/ORDER-2020/AIR/Photo/Stock_Photo/generated"
+        input_dir_path = f"/mnt/networkshare/ORDER-2020/AIR/Photo"
     excel_shoes_list = []
     excel_shoes_set = []
     column_a_list = read_column_an_excel(excel_path)
@@ -115,6 +121,8 @@ def main():
         match = re.match(r"([A-Za-z]+)", base_name)
         if match:
             Letter = match.group(1)
+        else:
+            continue
         input_dir_path_main = os.path.join(input_dir_path, Letter)
         if os.path.exists(os.path.join(input_dir_path_main, excel_shoes["code"] + ".jpg")):
             image_path = os.path.join(input_dir_path_main, excel_shoes["code"] + ".jpg")
@@ -195,7 +203,8 @@ def main():
             draw.line((x_center - 100, y_center - 100, x_center + 100, y_center + 100), fill="red", width=25)
             draw.line((x_center - 100, y_center + 100, x_center + 100, y_center - 100), fill="red", width=25)
             
-        image.save(os.path.join(output_path, os.path.basename(image_path)))
+        image.save(os.path.join("results", os.path.basename(image_path)))
+        subprocess.run(['sudo', 'cp', os.path.join("results", os.path.basename(image_path)), output_path])
 
     # print(shoes_list)
     # for shoe in shoes_list:
